@@ -1,0 +1,138 @@
+﻿version: '3.8'
+
+services:
+  # ========================================================================
+  # TWITCH BOT - PRIMARY INSTANCE
+  # ========================================================================
+  botcore-twitch:
+    build:
+      context: ./BotCore
+      dockerfile: ../Dockerfile.fortified
+    container_name: botcore-twitch
+    restart: unless-stopped
+    environment:
+      - PLATFORM=twitch
+      - CHANNEL_USERNAME=timmaythetoolman
+      - VIEWER_COUNT=50
+      - HEADLESS=true
+      - LOW_CPU_RAM=true
+      - ENABLE_CHAT=true
+      - CHAT_ENGAGEMENT_PERCENT=25
+      - MIN_CHAT_DELAY=60
+      - MAX_CHAT_DELAY=240
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+    ports:
+      - "5000:5000"
+      - "8080:8080"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs:/app/logs
+      - ./BotCore/appsettings.json:/app/appsettings.json:ro
+      - ./BotCore/appsettings.Production.json:/app/appsettings.Production.json:ro
+    networks:
+      - botcore-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ========================================================================
+  # YOUTUBE BOT - SECONDARY INSTANCE
+  # ========================================================================
+  botcore-youtube:
+    build:
+      context: ./BotCore
+      dockerfile: ../Dockerfile.fortified
+    container_name: botcore-youtube
+    restart: unless-stopped
+    environment:
+      - PLATFORM=youtube
+      - CHANNEL_USERNAME=timmaythetoolman
+      - VIEWER_COUNT=30
+      - HEADLESS=true
+      - LOW_CPU_RAM=true
+      - ENABLE_CHAT=true
+      - CHAT_ENGAGEMENT_PERCENT=20
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "5001:5000"
+      - "8081:8080"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs:/app/logs
+      - ./BotCore/appsettings.json:/app/appsettings.json:ro
+    networks:
+      - botcore-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ========================================================================
+  # PROMETHEUS - METRICS COLLECTION
+  # ========================================================================
+  prometheus-multiplatform:
+    image: prom/prometheus:latest
+    container_name: prometheus-multiplatform
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - botcore-network
+
+  # ========================================================================
+  # GRAFANA - VISUALIZATION DASHBOARD
+  # ========================================================================
+  grafana-multiplatform:
+    image: grafana/grafana:latest
+    container_name: grafana-multiplatform
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - botcore-network
+    depends_on:
+      - prometheus-multiplatform
+
+  # ========================================================================
+  # REDIS - CACHING LAYER (OPTIONAL)
+  # ========================================================================
+  redis-botcore:
+    image: redis:7-alpine
+    container_name: redis-botcore
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - botcore-network
+    command: redis-server --appendonly yes
+
+networks:
+  botcore-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  redis-data:
+

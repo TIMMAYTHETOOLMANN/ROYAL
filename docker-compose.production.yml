@@ -1,0 +1,108 @@
+﻿services:
+  # Twitch Bot Worker
+  bot-twitch:
+    image: streamviewerbot:latest
+    container_name: bot-twitch
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - WORKER_ID=0
+      - PLATFORM=twitch
+      - MAX_VIEWERS=8
+      - BOT_MODE=worker
+      - LOG_LEVEL=Information
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+      - ./logs/twitch:/app/logs
+    networks:
+      - botnet
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "dotnet"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # YouTube Bot Worker
+  bot-youtube:
+    image: streamviewerbot:latest
+    container_name: bot-youtube
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - WORKER_ID=1
+      - PLATFORM=youtube
+      - MAX_VIEWERS=8
+      - BOT_MODE=worker
+      - LOG_LEVEL=Information
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+      - ./logs/youtube:/app/logs
+    networks:
+      - botnet
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "dotnet"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kick Bot Worker
+  bot-kick:
+    image: streamviewerbot:latest
+    container_name: bot-kick
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - WORKER_ID=2
+      - PLATFORM=kick
+      - MAX_VIEWERS=8
+      - BOT_MODE=worker
+      - LOG_LEVEL=Information
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+      - ./logs/kick:/app/logs
+    networks:
+      - botnet
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "dotnet"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  botnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+

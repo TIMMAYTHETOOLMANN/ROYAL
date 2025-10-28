@@ -1,0 +1,65 @@
+﻿version: '3.8'
+
+services:
+  streambot-visible:
+    build:
+      context: .
+      dockerfile: Dockerfile.visible
+    container_name: streambot-visible
+    restart: unless-stopped
+    environment:
+      # Stream Configuration
+      - USERNAME=YourStreamerName              # Required: Streamer username
+      - PLATFORM=trovo                         # Platform: trovo, kick, youtube, twitch, rumble
+      - TARGET_STREAM_URL=                     # Optional: Direct stream URL (overrides USERNAME+PLATFORM)
+      
+      # Viewer Settings
+      - MAX_VIEWERS=25                         # Maximum concurrent viewers
+      - MIN_VIEWERS=10                         # Minimum viewers (for pre-stream mode)
+      
+      # Display Settings (Visible Chrome)
+      - DISPLAY=:99                            # X virtual display
+      - HEADLESS=false                         # DISABLED for visible Chrome
+      - ENABLE_VNC=false                       # Set to true to enable VNC debugging
+      
+      # Chat Engagement
+      - ENABLE_CHAT=true                       # Enable chat engagement
+      - CHAT_ENGAGEMENT_PERCENT=30             # Percentage of viewers that chat
+      - MIN_CHAT_DELAY=45                      # Minimum seconds between messages
+      - MAX_CHAT_DELAY=180                     # Maximum seconds between messages
+      
+      # Advanced Settings
+      - ENABLE_STAGGERING=true                 # Stagger viewer entry
+      - STAGGER_DELAY_MIN=3000                 # Min stagger delay (ms)
+      - STAGGER_DELAY_MAX=8000                 # Max stagger delay (ms)
+      - ENABLE_DYNAMIC_ENTRY=true              # Enable dynamic viewer behavior
+      
+      # Proxy Configuration
+      - PROXY_LIST_PATH=/app/proxies.txt       # Path to proxy list
+    
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro      # Mount proxy list (read-only)
+      - ./logs:/app/logs                       # Mount logs directory
+    
+    # Optional: Expose VNC port for debugging
+    # Uncomment to view Chrome windows via VNC
+    # ports:
+    #   - "5900:5900"
+    
+    # Resource limits (adjust based on viewer count)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    
+    networks:
+      - streambot-network
+
+networks:
+  streambot-network:
+    driver: bridge
+

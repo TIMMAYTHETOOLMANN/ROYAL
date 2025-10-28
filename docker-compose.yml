@@ -1,0 +1,138 @@
+﻿version: '3.8'
+
+services:
+  # Main bot orchestrator service
+  bot-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: streamviewerbot:latest
+    container_name: bot-orchestrator
+    restart: unless-stopped
+    environment:
+      - BOT_MODE=orchestrator
+      - ENABLE_API=true
+      - API_PORT=5000
+      - MAX_VIEWERS_PER_INSTANCE=50
+      - ENABLE_CHAT=true
+      - LOG_LEVEL=Information
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+      - ./logs:/app/logs
+      - ./config:/app/config
+    networks:
+      - botnet
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  # Scalable bot worker instances
+  bot-worker:
+    image: streamviewerbot:latest
+    restart: unless-stopped
+    environment:
+      - BOT_MODE=worker
+      - ORCHESTRATOR_URL=http://bot-orchestrator:5000
+      - MAX_VIEWERS_PER_WORKER=25
+      - ENABLE_CHAT=${ENABLE_CHAT:-true}
+      - HEADLESS_MODE=true
+      - LOG_LEVEL=Warning
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+      - worker-logs:/app/logs
+    networks:
+      - botnet
+    depends_on:
+      - bot-orchestrator
+    deploy:
+      # Docker Swarm scaling configuration
+      replicas: 5
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Redis for coordination (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: bot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - botnet
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Monitoring with Prometheus (Docker Pro feature)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bot-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+    ports:
+      - "9090:9090"
+    networks:
+      - botnet
+    profiles:
+      - monitoring
+
+  # Grafana dashboard (Docker Pro feature)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bot-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - botnet
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+networks:
+  botnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  worker-logs:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+

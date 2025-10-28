@@ -1,0 +1,42 @@
+﻿version: '3.8'
+
+services:
+  botcore-youtube:
+    build:
+      context: .
+      dockerfile: Dockerfile.youtube
+    image: botcore-youtube:latest
+    container_name: botcore-youtube
+    restart: unless-stopped
+    environment:
+      - CHANNEL_USERNAME=timmaythetoolman
+      - VIEWER_COUNT=20
+      - HEADLESS=false
+      - LOW_CPU_RAM=false
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+      - DISPLAY=:99
+      - BotCore__Platform=YouTube
+      - BotCore__Mode=WatchTime
+      - YouTube__VideoUrl=https://www.youtube.com/watch?v=YOUR_VIDEO_ID
+      - YouTube__WatchDurationMinutes=60
+    ports:
+      - "5001:5000"
+      - "8081:8080"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs/youtube:/app/logs
+    networks:
+      - botcore-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+
+networks:
+  botcore-network:
+    driver: bridge
+

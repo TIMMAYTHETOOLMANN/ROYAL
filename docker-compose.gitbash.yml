@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  botcore-twitch:
+    image: botcore-base:latest
+    container_name: botcore-twitch
+    restart: unless-stopped
+    environment:
+      - PLATFORM=twitch
+      - CHANNEL_USERNAME=timmaythetoolman
+      - VIEWER_COUNT=50
+      - HEADLESS=false
+      - LOW_CPU_RAM=false
+      - ENABLE_CHAT=true
+      - CHAT_ENGAGEMENT_PERCENT=25
+      - MIN_CHAT_DELAY=60
+      - MAX_CHAT_DELAY=240
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+      - DISPLAY=:99
+    ports:
+      - "5000:5000"
+      - "8080:8080"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs:/app/logs
+      - ./BotCore/appsettings.json:/app/appsettings.json:ro
+      - ./BotCore/appsettings.Production.json:/app/appsettings.Production.json:ro
+    networks:
+      - botcore-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  botcore-youtube:
+    image: botcore-base:latest
+    container_name: botcore-youtube
+    restart: unless-stopped
+    environment:
+      - PLATFORM=youtube
+      - CHANNEL_USERNAME=timmaythetoolman
+      - VIEWER_COUNT=30
+      - HEADLESS=false
+      - LOW_CPU_RAM=false
+      - ENABLE_CHAT=true
+      - CHAT_ENGAGEMENT_PERCENT=20
+      - MIN_CHAT_DELAY=60
+      - MAX_CHAT_DELAY=240
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+      - DISPLAY=:99
+    ports:
+      - "5001:5000"
+      - "8081:8080"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs:/app/logs
+      - ./BotCore/appsettings.json:/app/appsettings.json:ro
+    networks:
+      - botcore-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  prometheus-multiplatform:
+    image: prom/prometheus:latest
+    container_name: prometheus-multiplatform
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - botcore-network
+  grafana-multiplatform:
+    image: grafana/grafana:latest
+    container_name: grafana-multiplatform
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - botcore-network
+networks:
+  botcore-network:
+    driver: bridge

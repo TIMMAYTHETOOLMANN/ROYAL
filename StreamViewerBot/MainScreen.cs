@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
@@ -524,6 +524,7 @@ namespace StreamViewerBot
             _userAgentListDirectory = txtUserAgentList.Text = _configuration.AppSettings.Settings["userAgentListDirectory"].Value;
             _chatMessagesDirectory = txtChatMessages.Text = _configuration.AppSettings.Settings["chatMessageDirectory"].Value;
             txtStreamUrl.Text = _configuration.AppSettings.Settings["streamUrl"].Value;
+            // Default to false for local testing, but allow user to enable for Docker-like testing
             _headless = checkHeadless.Checked =
                 Convert.ToBoolean(_configuration.AppSettings.Settings["headless"].Value);
             numRefreshMinutes.Value = Convert.ToInt32(_configuration.AppSettings.Settings["refreshInterval"].Value);
@@ -683,12 +684,11 @@ namespace StreamViewerBot
 
             var needs = new ExecuteNeedsDto()
             {
-                Headless = _headless,
-                Service = _serviceType,
+                Headless = _headless, // Respect UI setting (false for local, true for Docker)
                 Stream = txtStreamUrl.Text,
                 BrowserLimit = browserLimit,
                 ChatMessages = _chatMessages,
-                LoginInfos = _lstLoginInfo,
+                LoginInfos = _lstLoginInfo.Cast<object>().ToList(),
                 PreferredQuality = _quality,
                 RefreshInterval = Convert.ToInt32(numRefreshMinutes.Value),
                 ProxyListDirectory = _proxyListDirectory,
@@ -742,9 +742,9 @@ namespace StreamViewerBot
             LogError(exception);
         }
 
-        private void LogMessage(Exception exception)
+        private void LogMessage(string message, LogLevel level = LogLevel.Info)
         {
-            LogInfo(exception);
+            LogInfo(new Exception(message));
         }
 
         private void AllBrowsersTerminated()

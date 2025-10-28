@@ -1,0 +1,90 @@
+﻿# Docker Swarm deployment for massive scaling (Docker Pro)
+version: '3.8'
+
+services:
+  bot-worker:
+    image: streamviewerbot:latest
+    environment:
+      - BOT_MODE=worker
+      - ORCHESTRATOR_URL=http://bot-orchestrator:5000
+      - MAX_VIEWERS_PER_WORKER=25
+      - ENABLE_CHAT=true
+      - HEADLESS_MODE=true
+      - TARGET_STREAM_URL=${TARGET_STREAM_URL}
+      - PROXY_LIST_PATH=/app/proxies.txt
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+    networks:
+      - botnet
+    deploy:
+      mode: replicated
+      replicas: 10  # Scale to 10, 50, 100+ instances
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+      placement:
+        max_replicas_per_node: 5
+        constraints:
+          - node.role == worker
+
+  orchestrator:
+    image: streamviewerbot:latest
+    environment:
+      - BOT_MODE=orchestrator
+      - ENABLE_API=true
+      - API_PORT=5000
+      - REDIS_HOST=redis
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    ports:
+      - "5000:5000"
+    networks:
+      - botnet
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 512mb
+    networks:
+      - botnet
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  botnet:
+    driver: overlay
+    attachable: true
+
+# To deploy: docker stack deploy -c docker-compose.swarm.yml botstack
+# To scale: docker service scale botstack_bot-worker=50
+

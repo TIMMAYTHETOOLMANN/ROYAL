@@ -1,0 +1,277 @@
+﻿# ========================================================================
+# GRAFANA DATASOURCE PROVISIONING
+# Auto-configure Prometheus datasource
+# ========================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: POST
+# ========================================================================
+# JARVIS 3.0 - FORTIFIED DEPLOYMENT GUIDE
+# Enterprise-Grade Multi-Platform System
+# ========================================================================
+
+## 🎯 Overview
+
+This fortified deployment system provides enterprise-grade reliability, resource management, and sophisticated monitoring for multi-platform stream viewer bots.
+
+## 🚀 Quick Start
+
+### Option 1: Windows Batch File
+```cmd
+DEPLOY_FORTIFIED.bat
+```
+
+### Option 2: PowerShell Direct
+```powershell
+.\deploy-multiplatform.ps1 -Channel "timmaythetoolman" -MaxViewersPerPlatform 50
+```
+
+### Option 3: Custom Parameters
+```powershell
+.\deploy-multiplatform.ps1 `
+    -Channel "yourchannel" `
+    -MaxViewersPerPlatform 100 `
+    -MinViewersPerPlatform 50 `
+    -CheckIntervalMinutes 5 `
+    -ForceRebuild `
+    -Environment "Production"
+```
+
+## 📋 Key Features
+
+### 1. **Resource Management**
+- **CPU Limits**: 2.0 CPUs per container (max)
+- **Memory Limits**: 1GB RAM per container (max)
+- **Memory Reservation**: 512MB guaranteed
+- **Restart Policy**: Max 3 automatic restarts on failure
+
+### 2. **Reliability Enhancements**
+- ✅ Automatic retry logic (5 attempts with exponential backoff)
+- ✅ Pre-flight system validation (CPU, RAM, disk space)
+- ✅ Comprehensive health checks (300s timeout)
+- ✅ Graceful degradation on failures
+- ✅ Emergency cleanup procedures
+
+### 3. **Monitoring Stack**
+- **Prometheus**: Metrics collection (port 9090)
+- **Grafana**: Visualization dashboards (port 3000)
+- **AlertManager**: Alert routing (port 9093)
+- **Redis**: State management (port 6379)
+
+### 4. **Security Hardening**
+- 🔒 Non-root container execution
+- 🔒 Log rotation (10MB max, 3 files)
+- 🔒 Resource isolation per platform
+- 🔒 Configuration backups before deployment
+
+## 🎛️ Configuration Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `-Channel` | timmaythetoolman | Target channel name |
+| `-MaxViewersPerPlatform` | 50 | Maximum viewers per platform |
+| `-MinViewersPerPlatform` | 30 | Minimum viewers when live |
+| `-CheckIntervalMinutes` | 3 | Platform check frequency |
+| `-ForceRebuild` | false | Force Docker image rebuild |
+| `-SkipHealthChecks` | false | Skip health validation |
+| `-Environment` | Production | Deployment environment |
+
+## 📊 System Requirements
+
+### Minimum Requirements
+- **CPU**: 2 cores allocated to Docker
+- **RAM**: 4GB allocated to Docker
+- **Disk**: 10GB free space
+- **Docker**: Desktop 20.10+ with Compose V2
+
+### Recommended Requirements
+- **CPU**: 4+ cores
+- **RAM**: 8GB+
+- **Disk**: 20GB+ free space
+- **Network**: Stable broadband connection
+
+## 🔍 Monitoring Endpoints
+
+### Health Checks
+- **Twitch**: http://localhost:5000/health
+- **YouTube**: http://localhost:5001/health
+
+### Metrics
+- **Twitch**: http://localhost:5000/metrics
+- **YouTube**: http://localhost:5001/metrics
+
+### Monitoring Tools
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **AlertManager**: http://localhost:9093
+
+## 🛠️ Management Commands
+
+### View Logs
+```powershell
+# All platforms
+docker-compose -f docker-compose.fortified.yml logs -f
+
+# Twitch only
+docker-compose -f docker-compose.fortified.yml logs -f botcore-twitch
+
+# YouTube only
+docker-compose -f docker-compose.fortified.yml logs -f botcore-youtube
+```
+
+### Scale Operations
+```powershell
+# Scale up
+docker-compose -f docker-compose.fortified.yml up -d --scale botcore-twitch=1 --scale botcore-youtube=1
+
+# Scale down specific platform
+docker-compose -f docker-compose.fortified.yml scale botcore-twitch=0
+
+# Restart specific platform
+docker-compose -f docker-compose.fortified.yml restart botcore-youtube
+```
+
+### Complete Teardown
+```powershell
+docker-compose -f docker-compose.fortified.yml down -v --remove-orphans
+```
+
+## 📈 Operational Metrics
+
+### Per-Platform Capacity
+- **Max Concurrent Viewers**: 50 per platform
+- **Chat Engagement Rate**: 25%
+- **Viewer Fluctuation**: ±15% (realistic)
+- **Auto-Scale Threshold**: 30+ viewers
+
+### System-Wide Capacity
+- **Total Platforms**: 2 (Twitch + YouTube)
+- **Total Max Viewers**: 100 concurrent
+- **Total Containers**: 6 (2 bots + 4 monitoring)
+
+## 🔐 Security Features
+
+1. **Container Isolation**: Each platform runs in isolated container
+2. **Resource Limits**: Hard caps prevent resource exhaustion
+3. **Non-Root Execution**: Containers run as unprivileged user
+4. **Log Rotation**: Prevents disk space issues
+5. **Configuration Backups**: Automatic before each deployment
+
+## 🚨 Troubleshooting
+
+### Deployment Fails
+1. Check logs: `logs/deployment-errors-*.log`
+2. Verify Docker is running: `docker ps`
+3. Check disk space: `docker system df`
+4. Review error logs in dashboard
+
+### Services Not Healthy
+1. Wait 5 minutes for full startup
+2. Check individual health: `curl http://localhost:5000/health`
+3. Review container logs: `docker logs botcore-twitch`
+4. Restart if needed: `docker-compose restart botcore-twitch`
+
+### High Resource Usage
+1. Check metrics: http://localhost:9090
+2. Scale down if needed: Reduce MaxViewersPerPlatform
+3. Monitor with Grafana dashboards
+4. Check container stats: `docker stats`
+
+## 📁 Directory Structure
+
+```
+Stream-Viewer-Chat-Bot/
+├── deploy-multiplatform.ps1        # Main deployment script
+├── DEPLOY_FORTIFIED.bat           # Quick launcher
+├── docker-compose.fortified.yml   # Compose configuration
+├── Dockerfile.fortified           # Container definition
+├── monitoring/
+│   ├── prometheus.yml             # Metrics config
+│   ├── alertmanager.yml          # Alert config
+│   ├── grafana/
+│   │   ├── dashboards/
+│   │   └── datasources/
+│   └── prometheus/
+│       └── rules/
+├── logs/
+│   ├── twitch/                    # Twitch logs
+│   ├── youtube/                   # YouTube logs
+│   ├── audit/                     # Audit logs
+│   └── deployment-*.log           # Deployment logs
+├── config/
+│   ├── platforms/
+│   │   ├── twitch/
+│   │   └── youtube/
+│   └── monitoring/
+└── backups/
+    ├── compose/                   # Config backups
+    └── config/
+```
+
+## 🎯 Deployment Workflow
+
+1. **Pre-Flight Validation** → System resources checked
+2. **Infrastructure Init** → Directories and backups created
+3. **Image Build** → Fortified Docker image built
+4. **Stack Deployment** → Multi-platform containers launched
+5. **Health Checks** → Services validated (300s timeout)
+6. **Dashboard Display** → Operational status shown
+7. **Monitoring Active** → Prometheus/Grafana running
+
+## ✅ Success Indicators
+
+- ✅ All containers show "healthy" status
+- ✅ Health endpoints return 200 OK
+- ✅ Metrics available in Prometheus
+- ✅ Logs show "Monitoring channel" messages
+- ✅ Dashboard displays all green checkmarks
+
+## 🔄 Update Procedure
+
+### Force Rebuild
+```powershell
+.\deploy-multiplatform.ps1 -ForceRebuild
+```
+
+### Quick Redeploy
+```powershell
+docker-compose -f docker-compose.fortified.yml restart
+```
+
+## 📞 Support & Diagnostics
+
+### Comprehensive Logs
+All logs stored in timestamped files:
+- `logs/deployment-YYYYMMDD-HHMMSS.log`
+- `logs/deployment-errors-YYYYMMDD-HHMMSS.log`
+
+### Health Dashboard
+Run deployment script to see live dashboard with:
+- System resources
+- Container status
+- Monitoring endpoints
+- Management commands
+
+## 🎉 Post-Deployment
+
+After successful deployment:
+1. **Monitor streams**: System watches Twitch + YouTube
+2. **Auto-deploy**: Triggers when streams go live
+3. **Scale viewers**: 30-50 per platform automatically
+4. **Chat engagement**: 25% participation rate
+5. **Metrics tracking**: Full observability via Grafana
+
+---
+
+**JARVIS 3.0 Status**: Fortified deployment system operational and ready for enterprise-grade stream monitoring.
+

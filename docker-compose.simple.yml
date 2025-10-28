@@ -1,0 +1,196 @@
+﻿I. Katie better anyway, he's got a way better beer. I. version: '3.8'
+
+services:
+  # ============================================
+  # TROVO DEPLOYMENT
+  # ============================================
+  trovo-bot:
+    image: stream-viewer-bot:latest
+    container_name: trovo-viewer-bot
+    environment:
+      # Platform & Stream Configuration
+      USERNAME: "timmaythetoolman"         # Your username (same across all platforms)
+      PLATFORM: "trovo"                    # Just change the platform here!
+      
+      # Dynamic Viewer Configuration
+      MIN_VIEWERS: "15"                    # Minimum viewers to deploy
+      MAX_VIEWERS: "35"                    # Maximum viewers to deploy
+      
+      # Deployment Strategy
+      HEADLESS: "true"                     # true = headless, false = visible browsers
+      ENABLE_STAGGERING: "true"            # Stagger viewer entry
+      STAGGER_DELAY_MIN: "3000"            # Min delay between viewers (ms)
+      STAGGER_DELAY_MAX: "8000"            # Max delay between viewers (ms)
+      ENABLE_DYNAMIC_ENTRY: "true"         # Random viewer count within range
+      
+      # Chat Engagement System
+      ENABLE_CHAT: "true"                  # Enable chat participation
+      CHAT_ENGAGEMENT_PERCENT: "35"        # % of viewers that will chat
+      MIN_CHAT_DELAY: "45"                 # Min seconds between messages
+      MAX_CHAT_DELAY: "180"                # Max seconds between messages
+      AGGRESSIVE_CHAT: "false"             # More frequent chatting
+      
+      # Proxy Configuration
+      PROXY_LIST_PATH: "/app/proxies.txt"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs/trovo:/app/logs
+    restart: unless-stopped
+    networks:
+      - bot-network
+
+  # ============================================
+  # KICK DEPLOYMENT
+  # ============================================
+  kick-bot:
+    image: stream-viewer-bot:latest
+    container_name: kick-viewer-bot
+    environment:
+      USERNAME: "timmaythetoolman"
+      PLATFORM: "kick"                     # Just change the platform here!
+      MIN_VIEWERS: "20"
+      MAX_VIEWERS: "50"
+      HEADLESS: "true"
+      ENABLE_STAGGERING: "true"
+      STAGGER_DELAY_MIN: "4000"
+      STAGGER_DELAY_MAX: "10000"
+      ENABLE_DYNAMIC_ENTRY: "true"
+      ENABLE_CHAT: "true"
+      CHAT_ENGAGEMENT_PERCENT: "40"
+      MIN_CHAT_DELAY: "60"
+      MAX_CHAT_DELAY: "200"
+      AGGRESSIVE_CHAT: "false"
+      PROXY_LIST_PATH: "/app/proxies.txt"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs/kick:/app/logs
+    restart: unless-stopped
+    networks:
+      - bot-network
+
+  # ============================================
+  # YOUTUBE DEPLOYMENT
+  # ============================================
+  youtube-bot:
+    image: stream-viewer-bot:latest
+    container_name: youtube-viewer-bot
+    environment:
+      USERNAME: "timmaythetoolman"
+      PLATFORM: "youtube"                  # Just change the platform here!
+      MIN_VIEWERS: "25"
+      MAX_VIEWERS: "60"
+      HEADLESS: "true"
+      ENABLE_STAGGERING: "true"
+      STAGGER_DELAY_MIN: "5000"
+      STAGGER_DELAY_MAX: "12000"
+      ENABLE_DYNAMIC_ENTRY: "true"
+      ENABLE_CHAT: "true"
+      CHAT_ENGAGEMENT_PERCENT: "25"
+      MIN_CHAT_DELAY: "90"
+      MAX_CHAT_DELAY: "240"
+      AGGRESSIVE_CHAT: "false"
+      PROXY_LIST_PATH: "/app/proxies.txt"
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs/youtube:/app/logs
+    restart: unless-stopped
+    networks:
+      - bot-network
+
+  # ============================================
+  # TWITCH DEPLOYMENT
+  # ============================================
+  twitch-bot:
+    image: stream-viewer-bot:latest
+    container_name: twitch-viewer-bot
+    environment:
+      USERNAME: "timmaythetoolman"
+      PLATFORM: "twitch"                   # Just change the platform here!
+      MIN_VIEWERS: "30"
+      MAX_VIEWERS: "70"
+      HEADLESS: "true"
+      ENABLE_STAGGERING: "true"
+      STAGGER_DELAY_MIN: "3500"
+      STAGGER_DELAY_MAX: "9000"
+      ENABLE_DYNAMIC_ENTRY: "true"
+      ENABLE_CHAT: "true"
+      CHAT_ENGAGEMENT_PERCENT: "30"
+      MIN_CHAT_DELAY: "50"
+      MAX_CHAT_DELAY: "160"
+      AGGRESSIVE_CHAT: "false"
+      PROXY_LIST_PATH: "/app/proxies.txt"
+      PRE_STREAM_MODE: "false"            # Set to "true" to wait for stream to go live
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs/twitch:/app/logs
+    restart: unless-stopped
+    networks:
+      - bot-network
+
+  # ============================================
+  # RUMBLE DEPLOYMENT (Minimum 4 viewers)
+  # ============================================
+  rumble-bot:
+    image: stream-viewer-bot:latest
+    container_name: rumble-viewer-bot
+    environment:
+      USERNAME: "timmaythetoolman"
+      PLATFORM: "rumble"                   # Just change the platform here!
+      MIN_VIEWERS: "4"                     # Minimum 4 viewers as requested
+      MAX_VIEWERS: "15"
+      HEADLESS: "true"
+      ENABLE_STAGGERING: "true"
+      STAGGER_DELAY_MIN: "4000"
+      STAGGER_DELAY_MAX: "9000"
+      ENABLE_DYNAMIC_ENTRY: "true"
+      ENABLE_CHAT: "true"
+      CHAT_ENGAGEMENT_PERCENT: "35"
+      MIN_CHAT_DELAY: "60"
+      MAX_CHAT_DELAY: "200"
+      AGGRESSIVE_CHAT: "false"
+      PROXY_LIST_PATH: "/app/proxies.txt"
+      PRE_STREAM_MODE: "false"            # Set to "true" to wait for stream to go live
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs/rumble:/app/logs
+    restart: unless-stopped
+    networks:
+      - bot-network
+
+  # ============================================
+  # PRE-STREAM MODE - ALL PLATFORMS
+  # Deploy these to have bots waiting for streams to go live
+  # ============================================
+  pre-stream-all:
+    image: stream-viewer-bot:latest
+    container_name: pre-stream-monitor-all
+    environment:
+      USERNAME: "timmaythetoolman"
+      PLATFORM: "trovo"                    # Change to target platform
+      MIN_VIEWERS: "15"
+      MAX_VIEWERS: "35"
+      HEADLESS: "true"
+      ENABLE_STAGGERING: "true"
+      STAGGER_DELAY_MIN: "3000"
+      STAGGER_DELAY_MAX: "8000"
+      ENABLE_DYNAMIC_ENTRY: "true"
+      ENABLE_CHAT: "true"
+      CHAT_ENGAGEMENT_PERCENT: "35"
+      MIN_CHAT_DELAY: "45"
+      MAX_CHAT_DELAY: "180"
+      AGGRESSIVE_CHAT: "false"
+      PROXY_LIST_PATH: "/app/proxies.txt"
+      PRE_STREAM_MODE: "true"              # ENABLED - Waits for go live signal
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./logs/pre-stream:/app/logs
+    restart: unless-stopped
+    networks:
+      - bot-network
+    profiles:
+      - prestream  # Only start with: docker-compose --profile prestream up
+
+networks:
+  bot-network:
+    driver: bridge
+

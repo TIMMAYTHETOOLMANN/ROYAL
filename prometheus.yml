@@ -1,0 +1,21 @@
+﻿global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'botcore-monitor'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'botcore-twitch'
+    static_configs:
+      - targets: ['botcore-twitch:5000']
+    metrics_path: /metrics
+
+  - job_name: 'botcore-youtube'
+    static_configs:
+      - targets: ['botcore-youtube:5000']
+    metrics_path: /metrics
+

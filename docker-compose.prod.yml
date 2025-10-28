@@ -1,0 +1,274 @@
+﻿version: '3.8'
+
+# Production-ready configuration with enhanced security and performance
+
+services:
+  bot-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    image: streamviewerbot:latest
+    container_name: bot-orchestrator-prod
+    restart: always
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - BOT_MODE=orchestrator
+      - ENABLE_API=true
+      - API_PORT=5000
+      - MAX_VIEWERS_PER_INSTANCE=50
+      - ENABLE_CHAT=${ENABLE_CHAT:-true}
+      - LOG_LEVEL=Warning
+      - REDIS_HOST=redis
+      - DOTNET_ENVIRONMENT=Production
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+      - orchestrator-logs:/app/logs
+      - ./config:/app/config:ro
+    networks:
+      - botnet
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "dotnet"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+          pids: 200
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  bot-worker:
+    image: streamviewerbot:latest
+    restart: always
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - BOT_MODE=worker
+      - ORCHESTRATOR_URL=http://bot-orchestrator-prod:5000
+      - MAX_VIEWERS_PER_WORKER=${MAX_VIEWERS_PER_WORKER:-25}
+      - ENABLE_CHAT=${ENABLE_CHAT:-true}
+      - HEADLESS_MODE=true
+      - LOG_LEVEL=Error
+      - TARGET_STREAM_URL=${TARGET_STREAM_URL}
+      - DOTNET_ENVIRONMENT=Production
+    volumes:
+      - ./proxies.txt:/app/proxies.txt:ro
+      - ./chat-config.txt:/app/chat-config.txt:ro
+      - worker-logs:/app/logs
+    networks:
+      - botnet
+    depends_on:
+      bot-orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "dotnet"]
+      interval: 45s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    deploy:
+      replicas: ${WORKER_REPLICAS:-10}
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+          pids: 150
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 180s
+
+  redis:
+    image: redis:7-alpine
+    container_name: bot-redis-prod
+    restart: always
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --tcp-backlog 511
+      --timeout 300
+      --tcp-keepalive 300
+    volumes:
+      - redis-data:/data
+    networks:
+      - botnet
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Nginx reverse proxy for orchestrator API (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: bot-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - botnet
+    depends_on:
+      - bot-orchestrator
+    profiles:
+      - production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  botnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+volumes:
+  orchestrator-logs:
+    driver: local
+  worker-logs:
+    driver: local
+  redis-data:
+    driver: local
+#!/usr/bin/env pwsh
+# PowerShell deployment script for cross-platform compatibility
+
+param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet('build', 'start', 'scale', 'stop', 'status', 'logs', 'clean')]
+    [string]$Action = 'menu',
+    
+    [Parameter(Mandatory=$false)]
+    [int]$Workers = 5
+)
+
+function Show-Banner {
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host " STREAM VIEWER BOT - DOCKER DEPLOYMENT" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host ""
+}
+
+function Build-Image {
+    Write-Host "Building Docker image..." -ForegroundColor Yellow
+    docker build -t streamviewerbot:latest .
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✓ Image built successfully!" -ForegroundColor Green
+    } else {
+        Write-Host "✗ Build failed!" -ForegroundColor Red
+    }
+}
+
+function Start-Deployment {
+    param([int]$WorkerCount = 5)
+    Write-Host "Starting deployment with $WorkerCount workers..." -ForegroundColor Yellow
+    docker-compose up -d --scale bot-worker=$WorkerCount
+    Write-Host "✓ Deployment started!" -ForegroundColor Green
+    Write-Host "- Orchestrator: http://localhost:5000" -ForegroundColor Cyan
+    Write-Host "- Workers: $WorkerCount" -ForegroundColor Cyan
+}
+
+function Scale-Workers {
+    param([int]$Count)
+    $isSwarm = docker service ls 2>$null | Select-String "botstack"
+    if ($isSwarm) {
+        docker service scale botstack_bot-worker=$Count
+    } else {
+        docker-compose up -d --scale bot-worker=$Count
+    }
+    Write-Host "✓ Scaled to $Count workers" -ForegroundColor Green
+}
+
+function Stop-Deployment {
+    Write-Host "Stopping deployment..." -ForegroundColor Yellow
+    docker-compose down
+    docker stack rm botstack 2>$null
+    Write-Host "✓ Stopped" -ForegroundColor Green
+}
+
+function Show-Status {
+    Write-Host "=== CONTAINERS ===" -ForegroundColor Cyan
+    docker ps --format "table {{.Names}}`t{{.Status}}`t{{.Ports}}"
+    Write-Host ""
+    Write-Host "=== SWARM SERVICES ===" -ForegroundColor Cyan
+    docker service ls 2>$null
+}
+
+function Show-Logs {
+    docker-compose logs -f --tail=100
+}
+
+# Main execution
+Show-Banner
+
+switch ($Action) {
+    'build' { Build-Image }
+    'start' { Start-Deployment -WorkerCount $Workers }
+    'scale' { Scale-Workers -Count $Workers }
+    'stop' { Stop-Deployment }
+    'status' { Show-Status }
+    'logs' { Show-Logs }
+    'clean' {
+        Write-Host "Cleaning up..." -ForegroundColor Yellow
+        docker-compose down -v
+        docker system prune -af
+        Write-Host "✓ Cleaned" -ForegroundColor Green
+    }
+    default {
+        Write-Host "Usage: .\docker-deploy.ps1 -Action <action> [-Workers <count>]"
+        Write-Host ""
+        Write-Host "Actions:"
+        Write-Host "  build   - Build Docker image"
+        Write-Host "  start   - Start deployment (default: 5 workers)"
+        Write-Host "  scale   - Scale workers"
+        Write-Host "  stop    - Stop deployment"
+        Write-Host "  status  - View status"
+        Write-Host "  logs    - View logs"
+        Write-Host "  clean   - Clean everything"
+        Write-Host ""
+        Write-Host "Examples:"
+        Write-Host "  .\docker-deploy.ps1 -Action build"
+        Write-Host "  .\docker-deploy.ps1 -Action start -Workers 10"
+        Write-Host "  .\docker-deploy.ps1 -Action scale -Workers 20"
+    }
+}
+

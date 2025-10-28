@@ -1,0 +1,19 @@
+﻿# ========================================================================
+# GRAFANA DASHBOARD PROVISIONING
+# Auto-load dashboard on Grafana startup
+# ========================================================================
+
+apiVersion: 1
+
+providers:
+  - name: 'BotCore Dashboards'
+    orgId: 1
+    folder: 'BotCore'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true
+

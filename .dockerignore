@@ -1,0 +1,43 @@
+﻿# Build artifacts
+**/bin/
+**/obj/
+**/Deployment/
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+**/logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Windows GUI projects (not needed in Docker)
+StreamViewerBot/
+AutoUpdater/
+WatchTimeBooster/
+ProxyTester/
+
+# Deployment scripts
+*.bat
+*.ps1
+InstantDeploy/
+
+# Documentation
+*.md
+*.txt
+*.png
+
+# Other
+win-x64.zip
+
