@@ -1,4 +1,4 @@
-﻿# YOUTUBE WATCH TIME BOOSTER
+﻿﻿# YOUTUBE WATCH TIME BOOSTER
 
 ## Purpose
 Deploy 30 concurrent Chromium browsers that:
@@ -253,10 +253,21 @@ Create `BotCore/appsettings.twitch.json`:
 ```
 
 **Get OAuth Token**:
-1. Visit: https://twitchapps.com/tmi/
-2. Authorize with your bot account
-3. Copy the `oauth:xxxxx` token
-4. Paste into appsettings.twitch.json
+
+⚠️ **IMPORTANT:** Twitchapps TMI has been discontinued. Use modern alternatives:
+
+**Option 1 (Recommended for End Users):**
+1. Visit: https://twitchtokengenerator.com/
+2. Click "Bot Chat Token"
+3. Authorize with your bot account
+4. Copy the access token
+5. Paste into `config/appsettings.twitch.json`
+
+**Option 2 (For Developers):**
+- See `TWITCH_OAUTH_GUIDE.md` for official Twitch OAuth setup
+- Use Twitch Developer Console: https://dev.twitch.tv/console/apps
+
+**Required Scopes:** `chat:read chat:edit channel:moderate`
 
 ### 3. System Resources
 - **CPU**: 4+ cores

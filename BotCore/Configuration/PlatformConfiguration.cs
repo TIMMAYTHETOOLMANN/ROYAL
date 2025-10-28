@@ -1,39 +1,4 @@
-﻿global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-  external_labels:
-    monitor: 'streaming-bot-monitor'
-
-scrape_configs:
-  # Prometheus self-monitoring
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']
-
-  # Node Exporter - System metrics
-  - job_name: 'node-exporter'
-    static_configs:
-      - targets: ['node-exporter:9100']
-
-  # cAdvisor - Container metrics
-  - job_name: 'cadvisor'
-    static_configs:
-      - targets: ['cadvisor:8080']
-
-  # Twitch Bot metrics
-  - job_name: 'botcore-twitch'
-    static_configs:
-      - targets: ['botcore-twitch:8080']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
-
-  # YouTube Bot metrics
-  - job_name: 'botcore-youtube'
-    static_configs:
-      - targets: ['botcore-youtube:8081']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace BotCore.Configuration
@@ -71,6 +36,9 @@ namespace BotCore.Configuration
     public class TwitchConfig
     {
         public string? OAuthToken { get; set; }
+        public string? ClientId { get; set; }
+        public string? ClientSecret { get; set; }
+        public string? RefreshToken { get; set; }
         public string Channel { get; set; } = string.Empty;
         public string[] ChatMessages { get; set; } = Array.Empty<string>();
         public int ChatIntervalSeconds { get; set; } = 60;
