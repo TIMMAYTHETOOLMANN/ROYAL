@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+﻿﻿using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using System;
@@ -156,43 +156,6 @@ namespace BotCore.Services
         }
     }
 }
-#!/bin/bash
-set -e
-
-echo "========================================="
-echo "🚀 DEPLOYING ENHANCED TWITCH BOT"
-echo "========================================="
-
-# Cleanup previous deployment
-echo "🧹 Cleaning previous deployment..."
-docker stop botcore-twitch 2>/dev/null || true
-docker rm botcore-twitch 2>/dev/null || true
-
-# Build optimized Twitch image
-echo "🔨 Building optimized Twitch image..."
-docker build -f Dockerfile.twitch -t botcore-twitch:latest . --no-cache
-
-# Create logs directory
-mkdir -p logs/twitch data/twitch
-
-# Deploy with optimized resource limits
-echo "🚢 Deploying Twitch bot with performance optimizations..."
-docker run -d \
-    --name botcore-twitch \
-    --restart unless-stopped \
-    --memory=512m \
-    --memory-reservation=256m \
-    --cpus=1.0 \
-    --cpu-shares=1024 \
-    -p 5000:5000 \
-    -p 8080:8080 \
-    -v "$(pwd)/config/appsettings.twitch.json:/app/appsettings.json:ro" \
-    -v "$(pwd)/logs/twitch:/app/logs" \
-    -v "$(pwd)/data/twitch:/app/data" \
-    -e PLATFORM=Twitch \
-    -e DOTNET_gcServer=1 \
-    -e DOTNET_GCHeapCount=2 \
-    botcore-twitch:latest
 
 echo ""
 echo "✅ Twitch Bot deployed successfully!"

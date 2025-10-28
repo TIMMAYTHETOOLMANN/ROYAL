@@ -1,0 +1,48 @@
+# DYNAMIC 20-VIEWER DEPLOYMENT - TWITCH + YOUTUBE
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY ["BotCore/BotCore.csproj", "BotCore/"]
+RUN dotnet restore "BotCore/BotCore.csproj"
+COPY ["BotCore/", "BotCore/"]
+RUN dotnet build "BotCore/BotCore.csproj" -c Release -o /app/build
+FROM build AS publish
+RUN dotnet publish "BotCore/BotCore.csproj" -c Release -o /app/publish \
+    --runtime linux-x64 \
+    --self-contained true
+# RUNTIME WITH VISUAL BROWSER SUPPORT
+FROM ubuntu:22.04 AS runtime
+# Install .NET 8 Runtime + Browser dependencies
+RUN apt-get update && apt-get install -y \
+    wget gnupg software-properties-common \
+    && wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
+    && dpkg -i packages-microsoft-prod.deb \
+    && rm packages-microsoft-prod.deb \
+    && apt-get update && apt-get install -y dotnet-runtime-8.0
+# Install Chromium + X11 for visual browser
+RUN apt-get update && apt-get install -y \
+    xvfb chromium-browser chromium-codecs-ffmpeg \
+    fonts-liberation libasound2 libatk-bridge2.0-0 \
+    libatk1.0-0 libcups2 libdbus-1-3 libdrm2 \
+    libgbm1 libgtk-3-0 libnspr4 libnss3 \
+    libxcomposite1 libxdamage1 libxfixes3 \
+    libxrandr2 libxss1 libxtst6 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=publish /app/publish .
+# Dynamic multi-platform configuration
+ENV DISPLAY=:99
+ENV DISPLAY_WIDTH=1280
+ENV DISPLAY_HEIGHT=720
+ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV PLAYWRIGHT_HEADLESS=false
+ENV PLATFORM=dynamic
+ENV CHAT_ENABLED=true
+ENV VIEWER_COUNT=20
+# Startup script with X11
+RUN printf '#!/bin/bash\n\
+Xvfb :99 -screen 0 ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}x24 -ac +extension GLX +render -noreset &\n\
+sleep 2\n\
+exec dotnet PreStreamLaunchEntryPoint.dll "$@"\n' > /app/start.sh && chmod +x /app/start.sh
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD pgrep -f dotnet || exit 1
+ENTRYPOINT ["/app/start.sh"]
